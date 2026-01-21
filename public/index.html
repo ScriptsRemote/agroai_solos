@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Fertilidade do Solo</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        :root {
+            --primary-color: #2d5016;
+            --primary-light: #6b8f47;
+            --secondary-color: #8b9a6b;
+            --accent-color: #a8b88a;
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f3f5;
+            --text-primary: #212529;
+            --text-secondary: #495057;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --error-color: #dc3545;
+            --info-color: #17a2b8;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.5rem 2rem;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            max-width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+
+        .header-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .header-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 90px);
+            gap: 0;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 380px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        .section {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: var(--primary-color);
+            border-radius: 2px;
+        }
+
+        /* File Upload */
+        .file-upload {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-upload-label {
+            display: block;
+            padding: 0.875rem 1.25rem;
+            background: var(--bg-secondary);
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-md);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .file-upload-label:hover {
+            border-color: var(--primary-light);
+            background: var(--bg-tertiary);
+            color: var(--primary-color);
+        }
+
+        .file-info {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            border-left: 3px solid var(--success-color);
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(107, 143, 71, 0.1);
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 0.875rem 1.25rem;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 0.75rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Status Messages */
+        .status {
+            margin-top: 1rem;
+            padding: 0.875rem 1rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* Map Container */
+        .map-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+            border-left: 1px solid var(--border-color);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Results Cards */
+        .results-container {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 1.5rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .stat-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--primary-light);
+        }
+
+        .stat-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin: 0;
+        }
+
+        .stat-card-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.875rem;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            font-size: 0.9rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Parameter Checklist */
+        .parameter-checklist {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+        }
+
+        .parameter-item {
+            padding: 0.625rem;
+            margin: 0.25rem 0;
+            border-radius: var(--radius-sm);
+            background: var(--bg-tertiary);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .parameter-item:hover {
+            background: var(--border-color);
+        }
+
+        .parameter-item.selected {
+            background: rgba(107, 143, 71, 0.1);
+            border: 2px solid var(--primary-light);
+        }
+
+        .parameter-item label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .parameter-item input[type="checkbox"] {
+            margin-right: 0.75rem;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-content {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-content h3 {
+            color: var(--primary-color);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .modal-content ul {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .modal-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Next Steps Section */
+        .next-steps {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            margin-top: 1rem;
+            border-left: 4px solid var(--primary-light);
+        }
+
+        .next-steps-title {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .next-steps-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .next-steps-list li {
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .next-steps-list li::before {
+            content: '→';
+            color: var(--primary-light);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Modal de Disclaimer -->
+    <div id="disclaimer-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">🌱 Bem-vindo ao Mapa de Fertilidade do Solo</h2>
+            </div>
+            <div class="modal-content">
+                <p>Esta aplicação permite analisar e visualizar dados de fertilidade do solo através de interpolação espacial avançada.</p>
+                
+                <h3>O que esta aplicação faz:</h3>
+                <ul>
+                    <li><strong>Integração de Dados:</strong> Combina dados de planilhas (CSV/XLSX) com shapefiles geográficos</li>
+                    <li><strong>Visualização Espacial:</strong> Exibe pontos de amostragem em mapas interativos com base de satélite</li>
+                    <li><strong>Interpolação:</strong> Gera mapas de fertilidade usando métodos IDW (Inverse Distance Weighting) e Krigagem</li>
+                    <li><strong>Análise Estatística:</strong> Calcula métricas (mínimo, máximo, média) para cada parâmetro analisado</li>
+                    <li><strong>Relatórios PDF:</strong> Gera relatórios profissionais com mapas classificados e estatísticas</li>
+                </ul>
+
+                <h3>Parâmetros Analisados:</h3>
+                <p>pH, P, K, Ca, Mg, Al, MO, Argila, Sb, CTC, V%, Zn, Cu, Fe, Mn, S, B</p>
+
+                <h3>Importante:</h3>
+                <p>Os resultados são baseados em interpolação matemática dos dados fornecidos. Sempre consulte um especialista em solos para interpretação técnica adequada.</p>
+            </div>
+            <div class="modal-footer">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="dont-show-again">
+                    <label for="dont-show-again">Não exibir novamente</label>
+                </div>
+                <button class="btn btn-primary" id="close-disclaimer" style="width: auto; padding: 0.75rem 2rem; margin: 0;">
+                    Entendi, continuar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo-icon">🌱</div>
+                <div>
+                    <h1 class="header-title">Mapa de Fertilidade do Solo</h1>
+                    <p class="header-subtitle">Análise e visualização de dados de fertilidade através de interpolação espacial</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Upload de Planilha -->
+            <div class="section">
+                <h2 class="section-title">📊 Planilha</h2>
+                <div class="file-upload">
+                    <label for="spreadsheet-file" class="file-upload-label">
+                        Escolher Planilha (CSV/XLSX)
+                    </label>
+                    <input type="file" id="spreadsheet-file" accept=".csv,.xlsx,.xls">
+                    <div id="spreadsheet-info" class="file-info hidden"></div>
+                </div>
+                <div class="form-group hidden" id="spreadsheet-column-group">
+                    <label class="form-label" for="spreadsheet-column">Coluna para Merge:</label>
+                    <select id="spreadsheet-column" class="form-control"></select>
+                </div>
+            </div>
+
+            <!-- Upload de Shapefile -->
+            <div class="section">
+                <h2 class="section-title">🗺️ Shapefile</h2>
+                <div class="file-upload">
+                    <label for="shapefile-file" class="file-upload-label">
+                        Escolher Shapefile (ZIP)
+                    </label>
+                    <input type="file" id="shapefile-file" accept=".zip">
+                    <div id="shapefile-info" class="file-info hidden"></div>
+                </div>
+                <div class="form-group hidden" id="shapefile-column-group">
+                    <label class="form-label" for="shapefile-column">Coluna para Merge:</label>
+                    <select id="shapefile-column" class="form-control"></select>
+                </div>
+            </div>
+
+            <!-- Filtro de Profundidade -->
+            <div class="section hidden" id="depth-filter-section">
+                <h2 class="section-title">📏 Filtro de Profundidade</h2>
+                <div class="form-group">
+                    <label class="form-label">Selecione a Profundidade:</label>
+                    <select id="depth-select" class="form-control">
+                        <option value="">Carregando profundidades...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Profundidade Selecionada:</label>
+                    <div id="selected-depth-info" class="file-info" style="background: var(--bg-secondary);">
+                        Nenhuma profundidade selecionada
+                    </div>
+                </div>
+            </div>
+
+            <!-- Merge -->
+            <div class="section">
+                <h2 class="section-title">🔗 Merge</h2>
+                <button id="merge-btn" class="btn btn-primary" disabled>
+                    Fazer Merge e Visualizar
+                </button>
+                <button id="cleanup-btn" class="btn btn-secondary">
+                    Limpar Dados
+                </button>
+                <div id="status" class="status hidden"></div>
+            </div>
+
+            <!-- Interpolação -->
+            <div class="section hidden" id="interpolation-section">
+                <h2 class="section-title">📈 Interpolação</h2>
+                <div class="form-group">
+                    <label class="form-label">Método:</label>
+                    <select id="interpolation-method" class="form-control">
+                        <option value="idw">IDW (Inverse Distance Weighting)</option>
+                        <option value="kriging">Krigagem</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Parâmetros:</label>
+                    <div id="parameters-checklist" class="parameter-checklist"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Resolução (metros):</label>
+                    <input type="number" id="resolution" value="10" min="5" max="100" step="5" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Raio de Busca (metros):</label>
+                    <input type="number" id="search-radius" value="100" min="50" max="500" step="10" class="form-control">
+                </div>
+                <button id="interpolate-btn" class="btn btn-primary" disabled>
+                    Gerar Interpolação
+                </button>
+                <div id="interpolation-status" class="status hidden"></div>
+            </div>
+
+            <!-- Resultados -->
+            <div class="section hidden" id="results-section">
+                <h2 class="section-title">📊 Resultados</h2>
+                <div id="statistics-cards" style="max-height: 250px; overflow-y: auto; margin-bottom: 1rem;"></div>
+                
+                <!-- Próximos Passos -->
+                <div class="next-steps">
+                    <div class="next-steps-title">Próximos Passos:</div>
+                    <ul class="next-steps-list">
+                        <li>Visualize os resultados no mapa</li>
+                        <li>Analise as estatísticas de cada parâmetro</li>
+                        <li>Gere o relatório PDF profissional</li>
+                    </ul>
+                </div>
+
+                <!-- Formulário de Relatório -->
+                <div id="report-form" style="margin-top: 1rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: var(--primary-color); font-weight: 600;">📄 Gerar Relatório PDF</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Shapefile de Limites (ZIP):</label>
+                        <div class="file-upload">
+                            <label for="boundary-shapefile" class="file-upload-label" style="padding: 0.75rem; font-size: 0.9rem;">
+                                Escolher Shapefile de Limites
+                            </label>
+                            <input type="file" id="boundary-shapefile" accept=".zip" style="display: none;">
+                            <div id="boundary-shapefile-info" class="file-info hidden"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Nome da Propriedade:</label>
+                        <input type="text" id="report-property-name" value="Ponte de Pedra" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nome do Proprietário:</label>
+                        <input type="text" id="report-owner-name" value="" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nome do Talhão:</label>
+                        <input type="text" id="report-plot-name" value="Todos os Talhões" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Safra:</label>
+                        <input type="text" id="report-crop-season" value="24/25" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Profundidade:</label>
+                        <input type="text" id="report-depth" value="0-20 cm" class="form-control">
+                    </div>
+                    <button id="generate-report-btn" class="btn btn-primary" style="margin-top: 0.5rem;">
+                        📄 Gerar Relatório PDF
+                    </button>
+                </div>
+                <div id="report-status" class="status hidden"></div>
+            </div>
+        </div>
+
+        <!-- Map and Results -->
+        <div class="map-wrapper">
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+            <div class="results-container hidden" id="results-container">
+                <div class="results-grid" id="results-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- GeoRaster para carregar TIFFs -->
+    <script src="https://unpkg.com/georaster"></script>
+    <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
+    
+    <!-- Script principal -->
+    <script src="app.js"></script>
+</body>
+</html>
