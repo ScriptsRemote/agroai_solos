@@ -40,7 +40,7 @@ try {
 }
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
@@ -1456,6 +1456,11 @@ app.post('/api/cleanup', (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Erro ao limpar arquivos: ' + error.message });
   }
+});
+
+// Health check endpoint para Render
+app.get('/healthz', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 app.listen(PORT, () => {
