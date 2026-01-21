@@ -1019,36 +1019,45 @@ document.getElementById('generate-report-btn').addEventListener('click', async (
             statusDiv.textContent = 'Relatório gerado e baixado com sucesso!';
             statusDiv.className = 'status success';
         } else {
-            // Resposta é JSON (erro)
-            const result = await response.json();
-            
-            if (result.success) {
-                // Fallback: se ainda retornar JSON com sucesso, tentar baixar pelo path
-                if (result.pdfPath) {
-                    // Fazer download do PDF via URL
-                    const downloadUrl = result.pdfPath;
-                    const a = document.createElement('a');
-                    a.href = downloadUrl;
-                    a.download = downloadUrl.split('/').pop() || 'relatorio_fertilidade.pdf';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    
-                    showLoading('Relatório Baixado!', 'O PDF foi salvo na pasta de downloads');
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    hideLoading();
-                    
-                    statusDiv.textContent = 'Relatório gerado e baixado com sucesso!';
-                    statusDiv.className = 'status success';
+            // Resposta não é PDF, tentar ler como JSON
+            try {
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Fallback: se ainda retornar JSON com sucesso, tentar baixar pelo path
+                    if (result.pdfPath) {
+                        // Fazer download do PDF via URL
+                        const downloadUrl = result.pdfPath;
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = downloadUrl.split('/').pop() || 'relatorio_fertilidade.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        
+                        showLoading('Relatório Baixado!', 'O PDF foi salvo na pasta de downloads');
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        hideLoading();
+                        
+                        statusDiv.textContent = 'Relatório gerado e baixado com sucesso!';
+                        statusDiv.className = 'status success';
+                    } else {
+                        hideLoading();
+                        statusDiv.textContent = 'Relatório gerado com sucesso!';
+                        statusDiv.className = 'status success';
+                    }
                 } else {
                     hideLoading();
-                    statusDiv.textContent = 'Relatório gerado com sucesso!';
-                    statusDiv.className = 'status success';
+                    statusDiv.textContent = 'Erro: ' + result.error;
+                    statusDiv.className = 'status error';
                 }
-            } else {
+            } catch (jsonError) {
+                // Se não conseguir fazer parse JSON, a resposta pode ser texto ou PDF
+                const responseText = await response.text();
                 hideLoading();
-                statusDiv.textContent = 'Erro: ' + result.error;
+                statusDiv.textContent = 'Erro ao processar resposta do servidor: ' + jsonError.message;
                 statusDiv.className = 'status error';
+                console.error('Resposta do servidor:', responseText.substring(0, 500));
             }
         }
     } catch (error) {
