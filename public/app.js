@@ -982,26 +982,74 @@ document.getElementById('generate-report-btn').addEventListener('click', async (
             throw new Error('Resposta do servidor não é JSON. Verifique o console do servidor.');
         }
 
-        const result = await response.json();
-
-        if (result.success) {
+        // Verificar se a resposta é um PDF (download) ou JSON (erro)
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('application/pdf')) {
+            // PDF foi retornado como download
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            // Obter nome do arquivo do header ou usar padrão
+            const contentDisposition = response.headers.get('content-disposition');
+            let filename = 'relatorio_fertilidade.pdf';
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+            
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
             // Atualizar loading com mensagem de sucesso
-            showLoading('Relatório Gerado!', 'Abrindo PDF...');
+            showLoading('Relatório Baixado!', 'O PDF foi salvo na pasta de downloads');
             
             // Pequeno delay para mostrar mensagem de sucesso
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
             hideLoading();
             
-            statusDiv.textContent = 'Relatório gerado com sucesso!';
+            statusDiv.textContent = 'Relatório gerado e baixado com sucesso!';
             statusDiv.className = 'status success';
-            
-            // Abrir PDF em nova aba
-            window.open(result.pdfPath, '_blank');
         } else {
-            hideLoading();
-            statusDiv.textContent = 'Erro: ' + result.error;
-            statusDiv.className = 'status error';
+            // Resposta é JSON (erro)
+            const result = await response.json();
+            
+            if (result.success) {
+                // Fallback: se ainda retornar JSON com sucesso, tentar baixar pelo path
+                if (result.pdfPath) {
+                    // Fazer download do PDF via URL
+                    const downloadUrl = result.pdfPath;
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = downloadUrl.split('/').pop() || 'relatorio_fertilidade.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    
+                    showLoading('Relatório Baixado!', 'O PDF foi salvo na pasta de downloads');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    hideLoading();
+                    
+                    statusDiv.textContent = 'Relatório gerado e baixado com sucesso!';
+                    statusDiv.className = 'status success';
+                } else {
+                    hideLoading();
+                    statusDiv.textContent = 'Relatório gerado com sucesso!';
+                    statusDiv.className = 'status success';
+                }
+            } else {
+                hideLoading();
+                statusDiv.textContent = 'Erro: ' + result.error;
+                statusDiv.className = 'status error';
+            }
         }
     } catch (error) {
         hideLoading();

@@ -1321,12 +1321,19 @@ app.post('/api/generate-report', async (req, res) => {
         console.log(`✅ Relatório PDF gerado: ${pdfPath}`);
         
         if (fs.existsSync(pdfPath)) {
-          console.log(`✅ PDF existe, retornando JSON`);
-          return res.json({
-            success: true,
-            pdfPath: `/reports/${pdfFilename}`,
-            message: 'Relatório gerado com sucesso'
-          });
+          console.log(`✅ PDF existe, enviando como download`);
+          
+          // Ler o arquivo PDF
+          const pdfBuffer = fs.readFileSync(pdfPath);
+          const pdfStats = fs.statSync(pdfPath);
+          
+          // Configurar headers para download
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `attachment; filename="${pdfFilename}"`);
+          res.setHeader('Content-Length', pdfStats.size);
+          
+          // Enviar o PDF
+          return res.send(pdfBuffer);
         } else {
           console.error(`❌ PDF não existe em: ${pdfPath}`);
           return res.status(500).json({
