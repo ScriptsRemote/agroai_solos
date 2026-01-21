@@ -907,6 +907,23 @@ document.getElementById('boundary-shapefile').addEventListener('change', async (
     }
 });
 
+// Função para mostrar loading
+function showLoading(message = 'Gerando Relatório PDF...', submessage = 'Isso pode levar alguns instantes') {
+    const overlay = document.getElementById('loading-overlay');
+    const text = document.getElementById('loading-text');
+    const subtext = document.getElementById('loading-subtext');
+    
+    text.textContent = message;
+    subtext.textContent = submessage;
+    overlay.classList.add('active');
+}
+
+// Função para ocultar loading
+function hideLoading() {
+    const overlay = document.getElementById('loading-overlay');
+    overlay.classList.remove('active');
+}
+
 // Event listener para botão de gerar relatório
 document.getElementById('generate-report-btn').addEventListener('click', async () => {
     if (!interpolationResults) {
@@ -920,6 +937,9 @@ document.getElementById('generate-report-btn').addEventListener('click', async (
     statusDiv.classList.remove('hidden');
 
     document.getElementById('generate-report-btn').disabled = true;
+    
+    // Mostrar loading overlay
+    showLoading('Gerando Relatório PDF...', 'Processando dados e gerando PDF. Por favor, aguarde...');
 
     try {
         // Obter informações dos campos de input
@@ -965,16 +985,26 @@ document.getElementById('generate-report-btn').addEventListener('click', async (
         const result = await response.json();
 
         if (result.success) {
+            // Atualizar loading com mensagem de sucesso
+            showLoading('Relatório Gerado!', 'Abrindo PDF...');
+            
+            // Pequeno delay para mostrar mensagem de sucesso
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            hideLoading();
+            
             statusDiv.textContent = 'Relatório gerado com sucesso!';
             statusDiv.className = 'status success';
             
             // Abrir PDF em nova aba
             window.open(result.pdfPath, '_blank');
         } else {
+            hideLoading();
             statusDiv.textContent = 'Erro: ' + result.error;
             statusDiv.className = 'status error';
         }
     } catch (error) {
+        hideLoading();
         statusDiv.textContent = 'Erro ao gerar relatório: ' + error.message;
         statusDiv.className = 'status error';
     } finally {
